@@ -4,6 +4,7 @@ import PySimpleGUI as sg
 from sys import exit
 import os
 import glob
+import re
 
 sg.theme('GreenTan')
 
@@ -70,6 +71,33 @@ def get_page(pno, zoom=0):
     return output  # return the PNG image
 
 
+def get_text(pno, start_pt, end_pt):
+    # dlist = dlist_tab[pno]  # get display list
+    # if not dlist:  # create if not yet there
+    #     dlist_tab[pno] = doc[pno].getDisplayList()
+    #     dlist = dlist_tab[pno]
+    page = doc.loadPage(pno)
+    # text = page.getText()
+    text = page.getTextbox(fitz.Rect(start_pt[0], start_pt[1], end_pt[0], end_pt[1]))
+    print(start_pt[0], start_pt[1], end_pt[0], end_pt[1])
+    # print(text)
+    # col = fitz.utils.getColor("PURPLE")
+    # page.drawRect(fitz.Rect(start_pt[0], start_pt[1], end_pt[0], end_pt[1]), color=col, fill=col, overlay=False)
+    # t = page.getTextbox(fitz.Rect(start_pt[0], start_pt[1], end_pt[0], end_pt[1]))
+    # zoom_x = 2.0
+    # zoom_y = 2.0
+    # mat = fitz.Matrix(zoom_x,zoom_y)
+    # pix = page.getPixmap(matrix=mat)
+    # output = os.path.join(final_dir, r"image_to_read.png")
+    # pix.writePNG(output)
+    pattern = "\[\d+\]\,*\ "
+    x = re.findall(pattern, text)
+    # print(x)
+    text = re.sub(pattern, "", text)
+    # print(text)
+    return text
+
+
 
 cur_page = 0
 data = get_page(cur_page)  # show page 1 for start
@@ -93,8 +121,8 @@ layout = [
     ],
     [sg.Graph(
     canvas_size=(612, 792),
-    graph_bottom_left=(0, 0),
-    graph_top_right=(612, 792),
+    graph_bottom_left=(0, 792),
+    graph_top_right=(612, 0),
     key="-GRAPH-",
     change_submits=True,  # mouse click events
     background_color='lightblue',
@@ -110,7 +138,7 @@ zoom_buttons = ("Top-L", "Top-R", "Bot-L", "Bot-R")
 window = sg.Window(title, layout,
                    return_keyboard_events=True, use_default_focus=False, finalize=True)
 graph = window["-GRAPH-"]
-graph.draw_image(data, location=(0, 792))
+graph.draw_image(data, location=(0, 0))
 dragging = False
 start_point = end_point = prior_rect = None
 
@@ -170,8 +198,9 @@ while True:
             force_page = True
 
     if force_page:
+        print(cur_page)
         data = get_page(cur_page, zoom)
-        graph.draw_image(data, location=(0,792))
+        graph.draw_image(data, location=(0,0))
         old_page = cur_page
     old_zoom = zoom
 
@@ -194,8 +223,14 @@ while True:
     elif event.endswith('+UP'):  # The drawing has ended because mouse up
         info = window["info"]
         info.update(value=f"grabbed rectangle from {start_point} to {end_point}")
+        print(start_point, end_point)
+        text = get_text(cur_page, start_point, end_point)
         start_point, end_point = None, None  # enable grabbing a new rect
         dragging = False
+        print(text)
+    
+    # if None not in (start_point, end_point):
+    #     print("not none")
 
 
 # import PySimpleGUI as sg
@@ -262,7 +297,7 @@ while True:
 #         os.remove(filepath)
     
 #     pdf_file = fitz.open("test_paper.pdf")
-#     first_page_no, last_page_no = 6, -1
+#     first_page_no, last_page_no = 2, -1
 #     if last_page_no == -1:
 #         page = pdf_file.loadPage(first_page_no - 1)
 #         # mat = 
@@ -277,8 +312,8 @@ while True:
 #         f = page.getFontList()
 #         print(page.rect)
 #         col = fitz.utils.getColor("PURPLE")
-#         page.drawRect(fitz.Rect(10.0, 10.0, 306.0, 280.0), color=col, fill=col, overlay=False)
-#         t = page.getTextbox(fitz.Rect(10.0, 10.0, 306.0, 280.0))
+#         page.drawRect(fitz.Rect(44.0, 374.0, 309.0, 681.0), color=col, fill=col, overlay=False)
+#         t = page.getTextbox(fitz.Rect(44.0, 374.0, 309.0, 681.0))
 #         zoom_x = 2.0
 #         zoom_y = 2.0
 #         mat = fitz.Matrix(zoom_x,zoom_y)
