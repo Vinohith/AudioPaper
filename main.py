@@ -5,8 +5,11 @@ from sys import exit
 import os
 import glob
 import re
+from gtts import gTTS
+from pygame import mixer
+import time
 
-sg.theme('GreenTan')
+# sg.theme('GreenTan')
 
 if len(sys.argv) == 1:
     fname = sg.popup_get_file(
@@ -29,8 +32,8 @@ curr_dir = os.getcwd()
 final_dir = os.path.join(curr_dir, 'software')
 if not os.path.exists(final_dir):
     os.makedirs(final_dir)
-print(curr_dir)
-print(final_dir)
+# print(curr_dir)
+# print(final_dir)
 image_dir = glob.glob(final_dir)
 for file_name in os.listdir(final_dir):
     # print(file_name)
@@ -38,6 +41,7 @@ for file_name in os.listdir(final_dir):
     os.chmod(filepath, 0o777)
     os.remove(filepath)
 
+mixer.init()
 
 def get_page(pno, zoom=0):
     """Return a PNG image for a document page number. If zoom is other than 0, one of the 4 page quadrants are zoomed-in instead and the corresponding clip returned.
@@ -79,7 +83,7 @@ def get_text(pno, start_pt, end_pt):
     page = doc.loadPage(pno)
     # text = page.getText()
     text = page.getTextbox(fitz.Rect(start_pt[0], start_pt[1], end_pt[0], end_pt[1]))
-    print(start_pt[0], start_pt[1], end_pt[0], end_pt[1])
+    # print(start_pt[0], start_pt[1], end_pt[0], end_pt[1])
     # print(text)
     # col = fitz.utils.getColor("PURPLE")
     # page.drawRect(fitz.Rect(start_pt[0], start_pt[1], end_pt[0], end_pt[1]), color=col, fill=col, overlay=False)
@@ -90,10 +94,12 @@ def get_text(pno, start_pt, end_pt):
     # pix = page.getPixmap(matrix=mat)
     # output = os.path.join(final_dir, r"image_to_read.png")
     # pix.writePNG(output)
-    pattern = "\[\d+\]\,*\ "
+    pattern = "\[\d+\]\,*\ *"
+    pattern2 = "\[\d+\]\,*\."
     x = re.findall(pattern, text)
     # print(x)
     text = re.sub(pattern, "", text)
+    text = re.sub(pattern2, ".", text)
     # print(text)
     return text
 
@@ -126,7 +132,16 @@ layout = [
     key="-GRAPH-",
     change_submits=True,  # mouse click events
     background_color='lightblue',
-    drag_submits=True),],
+    drag_submits=True),
+    sg.Frame(layout=[
+        [sg.Button("Speak")],
+        [sg.Button("Pause")],
+        [sg.Button("Unpause")],
+        [sg.Button("Stop")]], title='Audio',
+             title_color='red',
+             relief=sg.RELIEF_SUNKEN,
+             tooltip='Use these to set flags')
+    ],
     [sg.Text(key='info', size=(60, 1))]
 ]
 my_keys = ("Next", "Next:34", "Prev", "Prior:33", "Top-L", "Top-R",
@@ -198,7 +213,7 @@ while True:
             force_page = True
 
     if force_page:
-        print(cur_page)
+        # print(cur_page)
         data = get_page(cur_page, zoom)
         graph.draw_image(data, location=(0,0))
         old_page = cur_page
@@ -223,14 +238,55 @@ while True:
     elif event.endswith('+UP'):  # The drawing has ended because mouse up
         info = window["info"]
         info.update(value=f"grabbed rectangle from {start_point} to {end_point}")
-        print(start_point, end_point)
+        # print(start_point, end_point)
         text = get_text(cur_page, start_point, end_point)
         start_point, end_point = None, None  # enable grabbing a new rect
         dragging = False
-        print(text)
+        # print(text)
+        tts = gTTS(text=text, lang='en', slow=False)
+        speech_output = os.path.join(final_dir, r"speech.mp3")
+        tts.save(speech_output)
+        print("Saved")
+        # playback the speech
+    if event == "Speak":
+        mixer.music.load(speech_output)
+        mixer.music.play()
+    # wait for playback to end
+    # while mixer.music.get_busy():
+        # time.sleep(.1)
+    if event == "Pause":
+        mixer.music.pause()
+    if event == "Unpause":
+        mixer.music.unpause()
+    if event == "Stop":
+        mixer.music.stop()
+        try:
+            os.remove(speech_output)
+        except:
+            pass
+    # if event == "Pause":
+    #     mixer.music.pause()
+    # if event == "Unpause":
+    #     mixer.music.unpause()
+    mixer.stop()
+    # try:
+    #     os.remove(speech_output)
+    # except:
+    #     pass
     
     # if None not in (start_point, end_point):
     #     print("not none")
+    # tts = gTTS(text=text, lang='en', slow=False)
+    # speech_output = os.path.join(final_dir, r"speech.mp3")
+    # tts.save(speech_output)
+    # # playback the speech
+    # mixer.music.load(speech_output)
+    # # mixer.music.load('speech0.mp3')
+    # mixer.music.play()
+    # # wait for playback to end
+    # while mixer.music.get_busy():
+    #     time.sleep(.1)
+    # mixer.stop()
 
 
 # import PySimpleGUI as sg
