@@ -25,7 +25,7 @@ page_count = len(doc)
 
 dlist_tab = [None] * page_count
 
-title = "PyMuPDF display of '%s', pages: %i" % (fname, page_count)
+title = "PDF Viewer, pages: %i" % (page_count)
 
 curr_dir = os.getcwd()
 final_dir = os.path.join(curr_dir, 'software')
